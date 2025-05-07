@@ -1,0 +1,64 @@
+﻿@page
+@model OpenIddictAuthorizationServer.Pages.RegisterModel
+@{
+}
+
+<div class="flex items-center justify-center min-h-screen bg-surface dark:bg-surface-dark">
+    <div class="w-full max-w-md p-6 bg-surface-alt dark:bg-surface-dark-alt rounded-radius shadow-lg">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-semibold text-on-surface-strong dark:text-on-surface-dark-strong">Sign Up</h2>
+        </div>
+
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="mt-4 text-danger dark:text-danger-dark bg-danger/10 dark:bg-danger-dark/10 border border-danger dark:border-danger-dark rounded-radius px-4 py-2">
+                @Model.ErrorMessage
+            </div>
+        }
+
+        <form method="post" class="space-y-4 mt-6">
+            <div class="mb-4 flex w-full flex-col gap-1 text-on-surface dark:text-on-surface-dark">
+                <label class="w-fit pl-0.5 text-sm" asp-for="Input.Email">Email</label>
+                <input asp-for="Input.Email" type="email" class="w-full rounded-radius border border-outline bg-surface-alt px-2 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-75 dark:border-outline-dark dark:bg-surface-dark-alt/50 dark:focus-visible:outline-primary-dark" placeholder="Enter your email" />
+                <span asp-validation-for="Input.Email" class="pl-0.5 text-sm text-danger dark:text-danger-dark"></span>
+            </div>
+
+            <div class="mb-4 flex w-full flex-col gap-1 text-on-surface dark:text-on-surface-dark">
+                <label asp-for="Input.Password" class="w-fit pl-0.5 text-sm">Password</label>
+                <div x-data="{ showPassword: false }" class="relative">
+                    <input x-bind:type="showPassword ? 'text' : 'password'" asp-for="Input.Password" class="w-full rounded-radius border border-outline bg-surface-alt px-2 py-2 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-75 dark:border-outline-dark dark:bg-surface-dark-alt/50 dark:focus-visible:outline-primary-dark" autocomplete="current-password" placeholder="Enter your password" />
+                    <button type="button" x-on:click="showPassword = !showPassword" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface dark:text-on-surface-dark" aria-label="Show password">
+                        <svg x-show="!showPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                        </svg>
+                        <svg x-show="showPassword" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" aria-hidden="true" class="size-5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                        </svg>
+                    </button>
+                </div>
+                <span asp-validation-for="Input.Password" class="pl-0.5 text-sm text-danger dark:text-danger-dark"></span>
+            </div>
+
+
+            <button type="submit" class="w-full px-4 py-2 text-on-primary dark:text-on-primary-dark bg-primary dark:bg-primary-dark rounded-radius hover:bg-rose-500 dark:hover:bg-rose-500">Sign up</button>
+        </form>
+
+        <div class="flex items-center my-4">
+            <hr class="flex-grow border-outline dark:border-outline-dark" />
+            <span class="mx-2 text-sm text-on-surface dark:text-on-surface-dark">OR CONTINUE WITH</span>
+            <hr class="flex-grow border-outline dark:border-outline-dark" />
+        </div>
+
+        <div class="flex space-x-4">
+            <a href="/ExternalLogin?Provider=Facebook&ReturnUrl=@Model.ReturnUrl" class="w-1/2 px-4 py-2 text-on-primary dark:text-on-primary-dark bg-primary dark:bg-primary-dark rounded-radius hover:bg-rose-500 dark:hover:bg-rose-500 text-center">Facebook</a>
+            <a href="/ExternalLogin?Provider=Google&ReturnUrl=@Model.ReturnUrl" class="w-1/2 px-4 py-2 text-on-primary dark:text-on-primary-dark bg-secondary dark:bg-secondary-dark rounded-radius hover:bg-orange-300 dark:hover:bg-orange-300 text-center">Google</a>
+        </div>
+
+        <p class="mt-4 text-sm text-center text-on-surface dark:text-on-surface-dark">
+            Already have an account?
+            <a href="/login?ReturnUrl=@Uri.EscapeDataString(Model.ReturnUrl ?? "/")" class="text-primary dark:text-primary-dark hover:text-rose-500 dark:hover:text-rose-500 hover:underline transition-colors duration-200">Sign in</a>
+        </p>
+    </div>
+</div>
+

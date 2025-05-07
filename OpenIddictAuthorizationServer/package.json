@@ -1,0 +1,16 @@
+{
+  "name": "openiddictauthorizationserver",
+  "version": "1.0.0",
+  "main": "tailwind.config.js",
+  "scripts": {
+    "build:css": "npx tailwindcss -i ./wwwroot/css/styles.css -o ./wwwroot/css/output.css --minify",
+    "watch:css": "npx tailwindcss -i ./wwwroot/css/styles.css -o ./wwwroot/css/output.css --minify --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "tailwindcss": "^4.1.5"
+  }
+}

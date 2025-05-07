@@ -1,0 +1,27 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+
+@inject NavigationManager NavigationManager
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+
+<AuthorizeView>
+    <Authorized>
+        You are logged in.
+    </Authorized>
+    <NotAuthorized>
+        <button @onclick="Login">Đăng nhập</button>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    private void Login()
+    {
+        NavigationManager.NavigateTo("/account/login?returnUrl=/something", forceLoad: true);
+    }
+}
