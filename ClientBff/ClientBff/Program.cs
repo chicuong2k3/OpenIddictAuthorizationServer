@@ -27,6 +27,7 @@ builder.Services.AddAuthentication(options =>
     options.ResponseType = "code";
     options.SaveTokens = true;
     options.GetClaimsFromUserInfoEndpoint = true;
+    options.Scope.Add("offline_access");
     options.Scope.Add("openid");
     options.Scope.Add("profile");
     options.Scope.Add("email");

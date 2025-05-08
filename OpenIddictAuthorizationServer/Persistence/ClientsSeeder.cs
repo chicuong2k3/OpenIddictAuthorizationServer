@@ -74,6 +74,7 @@ public class ClientsSeeder
                     Permissions.GrantTypes.RefreshToken,
                     Permissions.ResponseTypes.Code,
                     $"{Permissions.Prefixes.Scope}openid",
+                    $"{Permissions.Prefixes.Scope}offline_access",
                     Permissions.Scopes.Email,
                     Permissions.Scopes.Profile,
                     Permissions.Scopes.Roles,

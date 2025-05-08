@@ -65,10 +65,16 @@ public class AuthService
     }
 
     public static IEnumerable<string> GetDestinations(Claim claim)
-
     {
         switch (claim.Type)
         {
+            case Claims.Subject:
+                yield return Destinations.AccessToken;
+                if (claim.Subject != null && claim.Subject.HasScope(Scopes.OpenId))
+                {
+                    yield return Destinations.IdentityToken;
+                }
+                break;
             case Claims.Name:
                 yield return Destinations.AccessToken;
                 if (claim.Subject != null && claim.Subject.HasScope(Scopes.Profile))
@@ -76,7 +82,6 @@ public class AuthService
                     yield return Destinations.IdentityToken;
                 }
                 yield break;
-
             case Claims.Email:
                 yield return Destinations.AccessToken;
                 if (claim.Subject != null && claim.Subject.HasScope(Scopes.Email))
@@ -91,7 +96,6 @@ public class AuthService
                     yield return Destinations.IdentityToken;
                 }
                 yield break;
-
             default:
                 yield return Destinations.AccessToken;
                 yield break;
