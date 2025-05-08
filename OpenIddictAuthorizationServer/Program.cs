@@ -50,16 +50,16 @@ builder.Services.AddOpenIddict()
 
          // Enable endpoints.
          options
-            .SetAuthorizationEndpointUris("/authorize")
-            .SetTokenEndpointUris("/token")
+            .SetAuthorizationEndpointUris(builder.Configuration["OpenIddictUris:AuthorizationEndpointUri"] ?? throw new ArgumentNullException("OpenIddictUris:AuthorizationEndpointUri is not defined."))
+            .SetTokenEndpointUris(builder.Configuration["OpenIddictUris:TokenEndpointUri"] ?? throw new ArgumentNullException("OpenIddictUris:TokenEndpointUri is not defined."))
             .SetAccessTokenLifetime(TimeSpan.FromHours(1))
             .SetIdentityTokenLifetime(TimeSpan.FromHours(1))
             .SetAuthorizationCodeLifetime(TimeSpan.FromMinutes(5))
             .SetRefreshTokenLifetime(TimeSpan.FromDays(7))
-            .SetEndSessionEndpointUris("/logout")
-            .SetUserInfoEndpointUris("/userinfo")
-            .SetIntrospectionEndpointUris("/introspect")
-            .SetRevocationEndpointUris("/revoke");
+            .SetEndSessionEndpointUris(builder.Configuration["OpenIddictUris:EndSessionEndpointUri"] ?? throw new ArgumentNullException("OpenIddictUris:EndSessionEndpointUri is not defined."))
+            .SetUserInfoEndpointUris(builder.Configuration["OpenIddictUris:UserInfoEndpointUri"] ?? throw new ArgumentNullException("OpenIddictUris:UserInfoEndpointUri is not defined."))
+            .SetIntrospectionEndpointUris(builder.Configuration["OpenIddictUris:IntrospectionEndpointUri"] ?? throw new ArgumentNullException("OpenIddictUris:IntrospectionEndpointUri is not defined."))
+            .SetRevocationEndpointUris(builder.Configuration["OpenIddictUris:RevocationEndpointUri"] ?? throw new ArgumentNullException("OpenIddictUris:RevocationEndpointUri is not defined."));
 
          // Enable flows.
          options.AllowAuthorizationCodeFlow()

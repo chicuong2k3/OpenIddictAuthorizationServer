@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using OpenIddict.Abstractions;
 using OpenIddictAuthorizationServer.Persistence;
+using OpenIddictAuthorizationServer.Services;
 using System.ComponentModel.DataAnnotations;
 using System.Web;
 
@@ -14,15 +15,21 @@ public class LoginModel : PageModel
 {
     private readonly IOpenIddictApplicationManager _applicationManager;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly AuthService _authService;
+    private readonly IConfiguration _configuration;
     private readonly SignInManager<ApplicationUser> _signInManager;
 
     public LoginModel(
         IOpenIddictApplicationManager applicationManager,
         UserManager<ApplicationUser> userManager,
+        AuthService authService,
+        IConfiguration configuration,
         SignInManager<ApplicationUser> signInManager)
     {
         _applicationManager = applicationManager;
         _userManager = userManager;
+        _authService = authService;
+        _configuration = configuration;
         _signInManager = signInManager;
     }
 
@@ -59,26 +66,12 @@ public class LoginModel : PageModel
 
         if (!string.IsNullOrEmpty(ReturnUrl))
         {
-            var decodedReturnUrl = HttpUtility.UrlDecode(ReturnUrl);
-            if (!Uri.TryCreate(decodedReturnUrl, UriKind.Relative, out var returnUri) ||
-                !decodedReturnUrl.StartsWith("/connect/authorize", StringComparison.OrdinalIgnoreCase))
-            {
-                ErrorMessage = "Invalid redirect URL";
-                ReturnUrl = null;
-                return;
-            }
+            var authorizationEndpointUri = _configuration["OpenIddictUris:AuthorizationEndpointUri"]
+                    ?? throw new ArgumentNullException("OpenIddictUris:AuthorizationEndpointUri is not defined.");
 
-            var absoluteUri = new Uri(new Uri("https://dummy-base"), decodedReturnUrl);
-            var query = QueryHelpers.ParseQuery(absoluteUri.Query);
-            if (query.TryGetValue("client_id", out var clientId) &&
-                query.TryGetValue("redirect_uri", out var redirectUri))
+            if (!await _authService.CheckReturnUrlAsync(ReturnUrl, authorizationEndpointUri, _applicationManager))
             {
-                var client = await _applicationManager.FindByClientIdAsync(clientId!);
-                if (client == null || !await _applicationManager.ValidateRedirectUriAsync(client, redirectUri!))
-                {
-                    ErrorMessage = "Invalid redirect URL";
-                    ReturnUrl = null;
-                }
+                ReturnUrl = null;
             }
         }
     }

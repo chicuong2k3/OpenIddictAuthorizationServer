@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Primitives;
 using OpenIddict.Abstractions;
 using OpenIddictAuthorizationServer.Persistence;
 using OpenIddictAuthorizationServer.Services;
@@ -16,6 +17,7 @@ public class ExternalLoginModel : PageModel
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly AuthService _authService;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<ExternalLoginModel> _logger;
 
     public ExternalLoginModel(
@@ -23,12 +25,14 @@ public class ExternalLoginModel : PageModel
         UserManager<ApplicationUser> userManager,
         SignInManager<ApplicationUser> signInManager,
         AuthService authService,
+        IConfiguration configuration,
         ILogger<ExternalLoginModel> logger)
     {
         _applicationManager = applicationManager;
         _userManager = userManager;
         _signInManager = signInManager;
         _authService = authService;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -55,41 +59,16 @@ public class ExternalLoginModel : PageModel
         var queryParams = new Dictionary<string, string?>();
         if (!string.IsNullOrEmpty(ReturnUrl))
         {
-            try
-            {
-                var decodedReturnUrl = HttpUtility.UrlDecode(ReturnUrl);
-                if (!Uri.TryCreate(decodedReturnUrl, UriKind.Relative, out var returnUri) ||
-                    !decodedReturnUrl.StartsWith("/connect/authorize", StringComparison.OrdinalIgnoreCase))
-                {
-                    _logger.LogWarning("Invalid ReturnUrl: {ReturnUrl}", ReturnUrl);
-                    return Redirect("/login");
-                }
+            var authorizationEndpointUri = _configuration["OpenIddictUris:AuthorizationEndpointUri"]
+                    ?? throw new ArgumentNullException("OpenIddictUris:AuthorizationEndpointUri is not defined.");
 
-                var absoluteUri = new Uri(new Uri("https://dummy-base"), ReturnUrl);
-                var returnQueryParams = QueryHelpers.ParseQuery(absoluteUri.Query);
-                if (returnQueryParams.TryGetValue("client_id", out var clientId) &&
-                    returnQueryParams.TryGetValue("redirect_uri", out var redirectUri))
-                {
-                    var client = await _applicationManager.FindByClientIdAsync(clientId!);
-                    if (client == null || !await _applicationManager.ValidateRedirectUriAsync(client, redirectUri!))
-                    {
-                        _logger.LogWarning("Invalid redirect_uri: {RedirectUri} for client: {ClientId}", redirectUri, clientId);
-                        return Redirect("/login");
-                    }
-
-                    queryParams["returnUrl"] = ReturnUrl;
-                }
-                else
-                {
-                    _logger.LogWarning("Missing client_id or redirect_uri in ReturnUrl: {ReturnUrl}", ReturnUrl);
-                    return Redirect("/login");
-                }
-            }
-            catch
+            if (!await _authService.CheckReturnUrlAsync(ReturnUrl, authorizationEndpointUri, _applicationManager))
             {
-                _logger.LogError("Invalid returnUrl: {ReturnUrl}", ReturnUrl);
+                _logger.LogWarning("Invalid ReturnUrl: {ReturnUrl}", ReturnUrl);
                 return Redirect("/login");
             }
+
+            queryParams["returnUrl"] = HttpUtility.UrlEncode(ReturnUrl);
         }
 
         var redirectUrl = Url.Page("./ExternalLogin", pageHandler: "Callback");
@@ -119,7 +98,14 @@ public class ExternalLoginModel : PageModel
         var queryParams = info.AuthenticationProperties?.Items
             .Where(kvp => !string.IsNullOrEmpty(kvp.Key))
             .ToDictionary(kvp => kvp.Key, kvp => kvp.Value) ?? new Dictionary<string, string?>();
-        var returnUrl = queryParams.ContainsKey("returnUrl") ? queryParams["returnUrl"] : "/";
+        var authorizationEndpointUri = _configuration["OpenIddictUris:AuthorizationEndpointUri"]
+                    ?? throw new ArgumentNullException("OpenIddictUris:AuthorizationEndpointUri is not defined.");
+        var returnUrl = queryParams.ContainsKey("returnUrl") ? HttpUtility.UrlDecode(queryParams["returnUrl"]) : "/login";
+        if (!string.IsNullOrEmpty(returnUrl) && !Url.IsLocalUrl(returnUrl) && !returnUrl.StartsWith(authorizationEndpointUri, StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("Invalid returnUrl in callback: {ReturnUrl}", returnUrl);
+            return Redirect("/login");
+        }
 
         var email = info.Principal.FindFirstValue(ClaimTypes.Email);
         var user = await _userManager.FindByEmailAsync(email ?? string.Empty);
