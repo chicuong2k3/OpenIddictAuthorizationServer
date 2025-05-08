@@ -1,4 +1,6 @@
+using ClientBff.Client;
 using ClientBff.Components;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
@@ -9,11 +11,12 @@ builder.Services.AddRazorComponents()
     .AddInteractiveWebAssemblyComponents();
 
 builder.Services.AddControllers();
+builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = "oidc";
 })
 .AddCookie()
 .AddOpenIdConnect("oidc", options =>
@@ -27,8 +30,21 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("openid");
     options.Scope.Add("profile");
     options.Scope.Add("email");
+    options.Scope.Add("roles");
+    options.Scope.Add("api");
 
+    // the paths where the OpenIddict server will redirect the user after authentication
+    // defaults to /signin-oidc
+    // Middleware OpenID Connect will automatically process this request
+    // and exchange the authorization code for tokens, get user information from the userinfo endpoint
+    // and store the tokens in the cookie
+    // and redirect the user to the RedirectUri specified in AuthenticationProperties of Challenge
     options.CallbackPath = "/signin-oidc";
+    // the path where the OpenIddict server will redirect the user after logout
+    // defaults to /signout-callback-oidc
+    // Middleware OpenID Connect will automatically process this request
+    // and redirect the user to the RedirectUri specified in AuthenticationProperties of SignOut
+    options.SignedOutCallbackPath = "/signout-callback-oidc";
 
     options.Events = new OpenIdConnectEvents
     {
@@ -52,6 +68,8 @@ builder.Services.AddCors(options =>
                 .AllowAnyHeader();
         });
 });
+
+builder.Services.AddCommonServices(builder.Configuration);
 
 var app = builder.Build();
 

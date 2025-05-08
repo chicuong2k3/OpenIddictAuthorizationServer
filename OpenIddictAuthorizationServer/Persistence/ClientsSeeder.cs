@@ -47,7 +47,7 @@ public class ClientsSeeder
 
         var applicationManager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 
-        var client = await applicationManager.FindByClientIdAsync("web_client");
+        var client = await applicationManager.FindByClientIdAsync(SampleClient.ClientId);
 
         if (client == null)
         {
@@ -69,6 +69,7 @@ public class ClientsSeeder
                 {
                     Permissions.Endpoints.Authorization,
                     Permissions.Endpoints.Token,
+                    Permissions.Endpoints.EndSession,
                     Permissions.Endpoints.Introspection,
                     Permissions.Endpoints.Revocation,
                     Permissions.GrantTypes.AuthorizationCode,

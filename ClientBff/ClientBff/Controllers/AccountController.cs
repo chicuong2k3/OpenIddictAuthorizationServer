@@ -19,10 +19,15 @@ public class AccountController : Controller
     }
 
     [HttpGet("logout")]
-    public async Task<IActionResult> Logout(string returnUrl = "/")
+    public IActionResult Logout(string returnUrl = "/")
     {
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        return Redirect(returnUrl);
+        return SignOut(
+            new AuthenticationProperties
+            {
+                RedirectUri = returnUrl ?? "/"
+            },
+            CookieAuthenticationDefaults.AuthenticationScheme,
+            "oidc");
     }
 
     [HttpGet("userinfo")]

@@ -1,6 +1,7 @@
 ﻿@page "/"
 @using Microsoft.AspNetCore.Components.Authorization
 
+@inject HttpClient HttpClient
 @inject NavigationManager NavigationManager
 
 <PageTitle>Home</PageTitle>
@@ -12,7 +13,25 @@ Welcome to your new app.
 
 <AuthorizeView>
     <Authorized>
-        You are logged in.
+        @if (tokenResponse == null)
+        {
+            <p>Loading...</p>
+        }
+        else if (tokenResponse.Tokens.Any())
+        {
+            <h4>Tokens</h4>
+            @foreach (var token in tokenResponse.Tokens)
+            {
+                <p style="border: 1px dashed black">@token.TokenType: @token.TokenData</p>
+            }
+
+            <h4>Scopes</h4>
+            <p>@string.Join(", ", tokenResponse.Scopes)</p>
+        }
+        else
+        {
+            <p>No tokens found.</p>
+        }
     </Authorized>
     <NotAuthorized>
         <button @onclick="Login">Đăng nhập</button>
@@ -22,6 +41,28 @@ Welcome to your new app.
 @code {
     private void Login()
     {
-        NavigationManager.NavigateTo("/account/login?returnUrl=/something", forceLoad: true);
+        NavigationManager.NavigateTo("/account/login", forceLoad: true);
     }
+
+    private TokenResponse? tokenResponse;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            tokenResponse = await HttpClient.GetFromJsonAsync<TokenResponse>("api/token");
+        }
+        catch (Exception ex)
+        {
+            tokenResponse = new();
+            Console.WriteLine($"Error fetching token info: {ex.Message}");
+        }
+    }
+
+    public class TokenResponse
+    {
+        public List<TokenInfo> Tokens { get; set; } = new();
+        public List<string> Scopes { get; set; } = new List<string>();
+    }
+
 }

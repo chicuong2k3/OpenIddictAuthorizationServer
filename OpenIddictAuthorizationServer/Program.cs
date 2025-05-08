@@ -45,7 +45,10 @@ builder.Services.AddOpenIddict()
     })
      .AddServer(options =>
      {
-         // Enable the token endpoint.
+         // Use this only for testing purpose.
+         options.DisableAccessTokenEncryption();
+
+         // Enable endpoints.
          options
             .SetAuthorizationEndpointUris("/authorize")
             .SetTokenEndpointUris("/token")
@@ -58,7 +61,7 @@ builder.Services.AddOpenIddict()
             .SetIntrospectionEndpointUris("/introspect")
             .SetRevocationEndpointUris("/revoke");
 
-         // Enable the client credentials flow.
+         // Enable flows.
          options.AllowAuthorizationCodeFlow()
             .RequireProofKeyForCodeExchange()
             .AllowRefreshTokenFlow();

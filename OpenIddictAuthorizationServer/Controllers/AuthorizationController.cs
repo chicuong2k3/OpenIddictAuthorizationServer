@@ -11,6 +11,8 @@ using System.Collections.Immutable;
 using OpenIddictAuthorizationServer.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using OpenIddictAuthorizationServer.Services;
+using System.ComponentModel.DataAnnotations;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace OpenIddictAuthorizationServer.Controllers;
 
@@ -198,7 +200,8 @@ public class AuthorizationController : Controller
         }
 
         var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        if (result == null || !result.Succeeded)
+        var isAuthenticated = _authService.IsAuthenticated(result, request);
+        if (!isAuthenticated)
         {
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
@@ -239,12 +242,43 @@ public class AuthorizationController : Controller
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
+    [HttpGet("~/logout")]
     [HttpPost("~/logout")]
-    [ValidateAntiForgeryToken]
-    [Authorize(AuthenticationSchemes = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)]
     public async Task<IActionResult> Logout()
     {
+        var request = HttpContext.GetOpenIddictServerRequest() ??
+                      throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
         await HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);
+
+        if (!string.IsNullOrEmpty(request.PostLogoutRedirectUri))
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var token = handler.ReadJwtToken(request.IdTokenHint);
+            var clientId = token.Audiences.FirstOrDefault();
+            var application = await _applicationManager.FindByClientIdAsync(clientId!);
+            if (application == null)
+            {
+                return Forbid(
+                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                    properties: new AuthenticationProperties(new Dictionary<string, string?>
+                    {
+                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
+                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Client ID is invalid."
+                    }));
+            }
+            var redirectUris = await _applicationManager.GetPostLogoutRedirectUrisAsync(application);
+            if (redirectUris.Contains(request.PostLogoutRedirectUri ?? string.Empty))
+            {
+                return SignOut(
+                        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                        properties: new AuthenticationProperties
+                        {
+                            RedirectUri = request.PostLogoutRedirectUri
+                        });
+            }
+        }
+
         return SignOut(
             authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
             properties: new AuthenticationProperties
@@ -311,5 +345,59 @@ public class AuthorizationController : Controller
         }
 
         return Ok(claims);
+    }
+
+    [HttpPost("~/introspect")]
+    public async Task<IActionResult> Introspect()
+    {
+        var request = HttpContext.GetOpenIddictServerRequest() ??
+                      throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        var isAuthenticated = _authService.IsAuthenticated(result, request);
+        if (!isAuthenticated)
+        {
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidToken,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The specified token is invalid."
+                }));
+        }
+
+        var response = new Dictionary<string, object>
+        {
+            ["active"] = true,
+            ["sub"] = result.Principal?.GetClaim(Claims.Subject) ?? string.Empty,
+            ["client_id"] = result.Principal?.GetClaim(Claims.ClientId) ?? string.Empty,
+            ["scope"] = string.Join(" ", result.Principal?.GetScopes() ?? []),
+            ["exp"] = result.Principal?.GetClaim(Claims.ExpiresAt) ?? string.Empty
+        };
+
+        // Add additional claims
+        if (result.Principal?.HasClaim(Claims.IssuedAt) == true)
+        {
+            response["iat"] = result.Principal.GetClaim(Claims.IssuedAt) ?? string.Empty;
+        }
+
+        return Ok(response);
+    }
+
+    [HttpPost("~/revoke")]
+    public async Task<IActionResult> Revoke()
+    {
+        var request = HttpContext.GetOpenIddictServerRequest() ??
+                      throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        var isAuthenticated = _authService.IsAuthenticated(result, request);
+        if (!isAuthenticated)
+        {
+            return Ok(); // Align with OpenID Connect specification
+        }
+
+        return Ok();
     }
 }
