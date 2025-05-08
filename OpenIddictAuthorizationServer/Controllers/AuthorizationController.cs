@@ -370,20 +370,4 @@ public class AuthorizationController : Controller
         return Ok(claims);
     }
 
-
-    [HttpPost("~/revoke")]
-    public async Task<IActionResult> Revoke()
-    {
-        var request = HttpContext.GetOpenIddictServerRequest() ??
-                      throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
-
-        var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        var isAuthenticated = _authService.IsAuthenticated(result, request);
-        if (!isAuthenticated)
-        {
-            return Ok(); // Align with OpenID Connect specification
-        }
-
-        return Ok();
-    }
 }
