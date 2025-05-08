@@ -9,7 +9,6 @@ It highlights best practices and explains security risks when designing login fl
 - [OAuth 2.0 Authorization Code Flow with PKCE](#oauth-20-authorization-code-flow-with-pkce)
 - [Security Risks: SPA as Authorization Server Login Page](#security-risks-spa-as-authorization-server-login-page)
   - [XSS Vulnerability](#xss-vulnerability)
-  - [Server-Rendered Login Page Mitigation](#server-rendered-login-page-mitigation)
   - [CSRF Risks](#csrf-risks)
 - [Give a Star](#-give-a-star)
 - [Resources](#resources)
@@ -42,11 +41,9 @@ While HTTP-only cookies reduce some risks, they don't eliminate XSS vulnerabilit
 For example, a malicious script can attach a keylogger to the login form or intercept form submissions, stealing credentials.
 - An XSS attack can modify the SPA's JavaScript logic, altering how it interacts with the /login endpoint. 
 For instance, the attacker could forge requests or redirect the SPA to a malicious endpoint, even if HTTP-only cookies are used.
-- If the /login endpoint returns an authorization code or other sensitive data to the SPA, this data is processed by the browser’s JavaScript environment, making it vulnerable.
+- If the /login endpoint returns an authorization code or other sensitive data to the SPA, this data is processed by the browserâ€™s JavaScript environment, making it vulnerable.
 
-### Server-Rendered Login Page Mitigation
-
-A secure alternative is to render the server-side rendered login page. This greatly reduces the attack surface for XSS:
+Use server-side rendered login page greatly reduces the attack surface for XSS:
 
 ![Server-Rendered Login Page](./images/ssr-login-page.png)
 
