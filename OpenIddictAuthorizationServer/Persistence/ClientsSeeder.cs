@@ -73,6 +73,7 @@ public class ClientsSeeder
                     Permissions.GrantTypes.AuthorizationCode,
                     Permissions.GrantTypes.RefreshToken,
                     Permissions.ResponseTypes.Code,
+                    $"{Permissions.Prefixes.Scope}openid",
                     Permissions.Scopes.Email,
                     Permissions.Scopes.Profile,
                     Permissions.Scopes.Roles,

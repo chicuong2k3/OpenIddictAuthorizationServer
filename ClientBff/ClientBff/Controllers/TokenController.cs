@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace ClientBff.Controllers;
 
@@ -18,7 +19,7 @@ public partial class TokenController : ControllerBase
         var idToken = await HttpContext.GetTokenAsync("id_token");
 
         var scopes = HttpContext.User.Claims
-            .Where(c => c.Type == "scope")
+            .Where(c => c.Type == "scopes")
             .Select(c => c.Value)
             .ToList();
 

@@ -139,15 +139,6 @@ public class ExternalLoginModel : PageModel
             _logger.LogInformation("Added external login for user: {Email}", email);
         }
 
-        // Check for MFA
-        if (await _userManager.GetTwoFactorEnabledAsync(user))
-        {
-            //queryParams["email"] = email;
-            //var queryString = QueryString.Create(queryParams);
-            //var mfaUrl = $"/mfa{queryString}";
-            //return Redirect(mfaUrl);
-        }
-
         var signInResult = await _signInManager.ExternalLoginSignInAsync(
             info.LoginProvider,
             info.ProviderKey,
