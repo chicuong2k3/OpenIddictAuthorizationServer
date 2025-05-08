@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace ClientBff.Controllers;
@@ -18,9 +19,11 @@ public partial class TokenController : ControllerBase
         var refreshToken = await HttpContext.GetTokenAsync("refresh_token");
         var idToken = await HttpContext.GetTokenAsync("id_token");
 
-        var scopes = HttpContext.User.Claims
-            .Where(c => c.Type == "scopes")
-            .Select(c => c.Value)
+        var handler = new JwtSecurityTokenHandler();
+        var token = handler.ReadJwtToken(accessToken);
+        var scopes = token.Claims
+            .Where(c => c.Type == "scope")
+            .SelectMany(c => c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
             .ToList();
 
         return Ok(new
