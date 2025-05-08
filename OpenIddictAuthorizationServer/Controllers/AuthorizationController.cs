@@ -318,18 +318,34 @@ public class AuthorizationController : Controller
 
         }
 
-        var issuedAtClaim = User.GetClaim(Claims.IssuedAt);
-        var expiresAtClaim = User.GetClaim(Claims.ExpiresAt);
         var claims = new Dictionary<string, object>(StringComparer.Ordinal)
         {
-            [Claims.Subject] = user.Id,
-            [Claims.Issuer] = "https://localhost:7070/",
-            [Claims.Audience] = User.GetClaim(Claims.Audience) ?? "web_client",
-            [Claims.IssuedAt] = !string.IsNullOrEmpty(issuedAtClaim) ? long.Parse(issuedAtClaim) : string.Empty,
-            [Claims.ExpiresAt] = !string.IsNullOrEmpty(expiresAtClaim) ? long.Parse(expiresAtClaim) : string.Empty,
-            ["oi_au_id"] = User.GetClaim("oi_au_id") ?? string.Empty,
-            ["oi_tkn_id"] = User.GetClaim("oi_tkn_id") ?? string.Empty
+            [Claims.Subject] = user.Id
         };
+
+        var issuer = User.GetClaim(Claims.Issuer);
+        if (!string.IsNullOrEmpty(issuer))
+        {
+            claims[Claims.Issuer] = issuer;
+        }
+
+        var audience = User.GetClaim(Claims.Audience);
+        if (!string.IsNullOrEmpty(audience))
+        {
+            claims[Claims.Audience] = audience;
+        }
+
+        var issuedAtClaim = User.GetClaim(Claims.IssuedAt);
+        if (!string.IsNullOrEmpty(issuedAtClaim) && long.TryParse(issuedAtClaim, out var iat))
+        {
+            claims[Claims.IssuedAt] = iat;
+        }
+
+        var expiresAtClaim = User.GetClaim(Claims.ExpiresAt);
+        if (!string.IsNullOrEmpty(expiresAtClaim) && long.TryParse(expiresAtClaim, out var exp))
+        {
+            claims[Claims.ExpiresAt] = exp;
+        }
 
         if (User.HasScope(Scopes.Email))
         {
@@ -354,43 +370,6 @@ public class AuthorizationController : Controller
         return Ok(claims);
     }
 
-    [HttpPost("~/introspect")]
-    public async Task<IActionResult> Introspect()
-    {
-        var request = HttpContext.GetOpenIddictServerRequest() ??
-                      throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
-
-        var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        var isAuthenticated = _authService.IsAuthenticated(result, request);
-        if (!isAuthenticated)
-        {
-            return Forbid(
-                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                properties: new AuthenticationProperties(new Dictionary<string, string?>
-                {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidToken,
-                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                        "The specified token is invalid."
-                }));
-        }
-
-        var response = new Dictionary<string, object>
-        {
-            ["active"] = true,
-            ["sub"] = result.Principal?.GetClaim(Claims.Subject) ?? string.Empty,
-            ["client_id"] = result.Principal?.GetClaim(Claims.ClientId) ?? string.Empty,
-            ["scope"] = string.Join(" ", result.Principal?.GetScopes() ?? []),
-            ["exp"] = result.Principal?.GetClaim(Claims.ExpiresAt) ?? string.Empty
-        };
-
-        // Add additional claims
-        if (result.Principal?.HasClaim(Claims.IssuedAt) == true)
-        {
-            response["iat"] = result.Principal.GetClaim(Claims.IssuedAt) ?? string.Empty;
-        }
-
-        return Ok(response);
-    }
 
     [HttpPost("~/revoke")]
     public async Task<IActionResult> Revoke()
