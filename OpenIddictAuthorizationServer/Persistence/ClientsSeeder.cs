@@ -18,6 +18,7 @@ public class ClientsSeeder
         var scopeManager = scope.ServiceProvider.GetRequiredService<IOpenIddictScopeManager>();
 
         await scopeManager.CreateAsync(new OpenIddictScopeDescriptor { Name = "email", DisplayName = "Email address" });
+        await scopeManager.CreateAsync(new OpenIddictScopeDescriptor { Name = "offline_access", DisplayName = "Offline access" });
         await scopeManager.CreateAsync(new OpenIddictScopeDescriptor { Name = "profile", DisplayName = "User profile" });
         await scopeManager.CreateAsync(new OpenIddictScopeDescriptor { Name = "openid", DisplayName = "Open ID" });
         await scopeManager.CreateAsync(new OpenIddictScopeDescriptor { Name = "roles", DisplayName = "User roles" });
@@ -41,9 +42,6 @@ public class ClientsSeeder
     public async Task AddClientsAsync()
     {
         await using var scope = _serviceProvider.CreateAsyncScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-
-        await dbContext.Database.EnsureCreatedAsync();
 
         var applicationManager = scope.ServiceProvider.GetRequiredService<IOpenIddictApplicationManager>();
 

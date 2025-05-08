@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -161,7 +162,11 @@ public class ExternalLoginModel : PageModel
             }
         }
 
-        await _signInManager.SignInAsync(user, isPersistent: true);
+        await _signInManager.SignInAsync(user, new AuthenticationProperties
+        {
+            IsPersistent = true,
+            RedirectUri = returnUrl
+        });
         return Redirect(returnUrl!);
     }
 

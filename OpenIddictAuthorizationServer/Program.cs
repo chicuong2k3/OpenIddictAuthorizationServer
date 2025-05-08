@@ -93,6 +93,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
     options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
+    options.DefaultChallengeScheme = IdentityConstants.ExternalScheme;
 })
     .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
     {
@@ -124,7 +125,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.AccessDeniedPath = "/access-denied";
     options.Cookie.HttpOnly = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.Strict;
+    options.Cookie.SameSite = SameSiteMode.Lax;
     options.Cookie.MaxAge = TimeSpan.FromDays(1);
     options.SlidingExpiration = true;
 });
@@ -139,7 +140,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var seeder = scope.ServiceProvider.GetRequiredService<ClientsSeeder>();
-    seeder.AddScopesAsync().GetAwaiter();
+    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await dbContext.Database.EnsureDeletedAsync();
+    await dbContext.Database.EnsureCreatedAsync();
+    await seeder.AddScopesAsync();
     await seeder.AddClientsAsync();
 }
 
