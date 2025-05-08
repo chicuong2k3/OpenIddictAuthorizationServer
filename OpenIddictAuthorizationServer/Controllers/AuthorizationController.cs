@@ -318,9 +318,17 @@ public class AuthorizationController : Controller
 
         }
 
+        var issuedAtClaim = User.GetClaim(Claims.IssuedAt);
+        var expiresAtClaim = User.GetClaim(Claims.ExpiresAt);
         var claims = new Dictionary<string, object>(StringComparer.Ordinal)
         {
             [Claims.Subject] = user.Id,
+            [Claims.Issuer] = "https://localhost:7070/",
+            [Claims.Audience] = User.GetClaim(Claims.Audience) ?? "web_client",
+            [Claims.IssuedAt] = !string.IsNullOrEmpty(issuedAtClaim) ? long.Parse(issuedAtClaim) : string.Empty,
+            [Claims.ExpiresAt] = !string.IsNullOrEmpty(expiresAtClaim) ? long.Parse(expiresAtClaim) : string.Empty,
+            ["oi_au_id"] = User.GetClaim("oi_au_id") ?? string.Empty,
+            ["oi_tkn_id"] = User.GetClaim("oi_tkn_id") ?? string.Empty
         };
 
         if (User.HasScope(Scopes.Email))
