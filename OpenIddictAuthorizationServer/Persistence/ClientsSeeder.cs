@@ -69,6 +69,8 @@ public class ClientsSeeder
                 {
                     Permissions.Endpoints.Authorization,
                     Permissions.Endpoints.Token,
+                    Permissions.Endpoints.Introspection,
+                    Permissions.Endpoints.Revocation,
                     Permissions.GrantTypes.AuthorizationCode,
                     Permissions.GrantTypes.RefreshToken,
                     Permissions.ResponseTypes.Code,
@@ -79,7 +81,6 @@ public class ClientsSeeder
                 },
                 Requirements =
                 {
-                    Requirements.Features.ProofKeyForCodeExchange
                 }
             });
         }

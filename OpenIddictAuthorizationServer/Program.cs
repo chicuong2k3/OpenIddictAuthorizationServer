@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
 using Microsoft.AspNetCore.Identity;
@@ -48,13 +47,21 @@ builder.Services.AddOpenIddict()
      {
          // Enable the token endpoint.
          options
-            .SetAuthorizationEndpointUris("connect/authorize")
-            .SetTokenEndpointUris("connect/token")
-            .SetUserInfoEndpointUris("connect/userinfo");
+            .SetAuthorizationEndpointUris("/authorize")
+            .SetTokenEndpointUris("/token")
+            .SetAccessTokenLifetime(TimeSpan.FromHours(1))
+            .SetIdentityTokenLifetime(TimeSpan.FromHours(1))
+            .SetAuthorizationCodeLifetime(TimeSpan.FromMinutes(5))
+            .SetRefreshTokenLifetime(TimeSpan.FromDays(7))
+            .SetEndSessionEndpointUris("/logout")
+            .SetUserInfoEndpointUris("/userinfo")
+            .SetIntrospectionEndpointUris("/introspect")
+            .SetRevocationEndpointUris("/revoke");
 
          // Enable the client credentials flow.
          options.AllowAuthorizationCodeFlow()
-            .RequireProofKeyForCodeExchange();
+            .RequireProofKeyForCodeExchange()
+            .AllowRefreshTokenFlow();
 
          // Register the signing and encryption credentials.
          options.AddDevelopmentEncryptionCertificate()
@@ -64,6 +71,7 @@ builder.Services.AddOpenIddict()
          options.UseAspNetCore()
                 .EnableAuthorizationEndpointPassthrough()
                 .EnableTokenEndpointPassthrough()
+                .EnableEndSessionEndpointPassthrough()
                 .EnableUserInfoEndpointPassthrough();
 
      })

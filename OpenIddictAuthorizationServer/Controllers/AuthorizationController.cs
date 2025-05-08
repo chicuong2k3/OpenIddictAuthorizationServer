@@ -9,10 +9,8 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using System.Collections.Immutable;
 using OpenIddictAuthorizationServer.Persistence;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.Authorization;
 using OpenIddictAuthorizationServer.Services;
-using System.Text.Json;
 
 namespace OpenIddictAuthorizationServer.Controllers;
 
@@ -44,8 +42,8 @@ public class AuthorizationController : Controller
         _authService = authService;
     }
 
-    [HttpGet("~/connect/authorize")]
-    [HttpPost("~/connect/authorize")]
+    [HttpGet("~/authorize")]
+    [HttpPost("~/authorize")]
     [IgnoreAntiforgeryToken] // OpenID Connect uses state for CSRF protection
     public async Task<IActionResult> Authorize()
     {
@@ -54,10 +52,10 @@ public class AuthorizationController : Controller
             throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
         // find the client application information in the database
-        var application = await _applicationManager.FindByClientIdAsync(request.ClientId ?? string.Empty) ??
+        var application = await _applicationManager.FindByClientIdAsync(request.ClientId!) ??
             throw new InvalidOperationException("Details concerning the calling client application cannot be found.");
         // Validate redirect_uri
-        if (!await _applicationManager.ValidateRedirectUriAsync(application, request.RedirectUri ?? string.Empty))
+        if (!await _applicationManager.ValidateRedirectUriAsync(application, request.RedirectUri!))
         {
             return Forbid(
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
@@ -159,28 +157,10 @@ public class AuthorizationController : Controller
         identity.SetAuthorizationId(authorizationId);
         identity.SetDestinations(AuthService.GetDestinations);
 
-        if ((request.ResponseType == "code") && !string.IsNullOrEmpty(request.CodeChallenge))
-        {
-            if (string.IsNullOrEmpty(request.CodeChallengeMethod) || request.CodeChallengeMethod != CodeChallengeMethods.Sha256)
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidRequest,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Code challenge method must be S256."
-                    }));
-            }
-
-            // Store code_challenge in the authorization properties
-            identity.SetClaim("code_challenge", request.CodeChallenge);
-            identity.SetClaim("code_challenge_method", request.CodeChallengeMethod);
-        }
-
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
-    [HttpPost("~/connect/token")]
+    [HttpPost("~/token")]
     public async Task<IActionResult> Exchange()
     {
         var request = HttpContext.GetOpenIddictServerRequest() ??
@@ -192,18 +172,7 @@ public class AuthorizationController : Controller
 
         if (request.IsAuthorizationCodeGrantType())
         {
-            // Validate client_id
-            if (string.IsNullOrEmpty(request.ClientId))
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidClient,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Client ID is missing."
-                    }));
-            }
-            var application = await _applicationManager.FindByClientIdAsync(request.ClientId);
+            var application = await _applicationManager.FindByClientIdAsync(request.ClientId!);
             if (application == null)
             {
                 return Forbid(
@@ -216,17 +185,7 @@ public class AuthorizationController : Controller
             }
 
             // Validate redirect_uri
-            if (string.IsNullOrEmpty(request.RedirectUri))
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidRequest,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Redirect URI is missing."
-                    }));
-            }
-            if (!await _applicationManager.ValidateRedirectUriAsync(application, request.RedirectUri))
+            if (!await _applicationManager.ValidateRedirectUriAsync(application, request.RedirectUri!))
             {
                 return Forbid(
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
@@ -236,93 +195,19 @@ public class AuthorizationController : Controller
                         [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Redirect URI is invalid."
                     }));
             }
-
-            // Validate authorization code
-            if (string.IsNullOrEmpty(request.Code))
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Authorization code is missing."
-                    }));
-            }
-            var token = await _tokenManager.FindByReferenceIdAsync(request.Code);
-            if (token == null)
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The authorization code is invalid or has expired."
-                    }));
-            }
-
-            // Validate code_verifier and PKCE
-            if (string.IsNullOrEmpty(request.CodeVerifier))
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Code verifier is missing."
-                    }));
-            }
-
-            // Authenticate to get the ClaimsPrincipal with code_challenge
-            var authResult = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            if (authResult?.Principal == null)
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Cannot authenticate token."
-                    }));
-            }
-
-            var codeChallenge = authResult.Principal.GetClaim("code_challenge");
-            var codeChallengeMethod = authResult.Principal.GetClaim("code_challenge_method");
-
-            if (string.IsNullOrEmpty(codeChallenge))
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "PKCE code_challenge not found for this authorization code."
-                    }));
-            }
-
-            if (codeChallengeMethod != CodeChallengeMethods.Sha256)
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "Invalid code_challenge_method."
-                    }));
-            }
-
-            if (!_authService.ValidatePkce(codeChallenge, request.CodeVerifier))
-            {
-                return Forbid(
-                    authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
-                    properties: new AuthenticationProperties(new Dictionary<string, string?>
-                    {
-                        [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
-                        [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "PKCE validation failed."
-                    }));
-            }
         }
 
         var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        if (result == null || !result.Succeeded)
+        {
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidGrant,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "The token request is invalid."
+                }));
+        }
 
         var userId = result.Principal?.GetClaim(Claims.Subject);
         var user = await _userManager.FindByIdAsync(userId ?? string.Empty);
@@ -354,7 +239,7 @@ public class AuthorizationController : Controller
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
-    [HttpPost("~/connect/logout")]
+    [HttpPost("~/logout")]
     [ValidateAntiForgeryToken]
     [Authorize(AuthenticationSchemes = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)]
     public async Task<IActionResult> Logout()
@@ -368,8 +253,8 @@ public class AuthorizationController : Controller
             });
     }
 
-    [HttpGet("~/connect/userinfo")]
-    [HttpPost("~/connect/userinfo")]
+    [HttpGet("~/userinfo")]
+    [HttpPost("~/userinfo")]
     [Authorize(AuthenticationSchemes = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)]
     public async Task<IActionResult> GetUserInfo()
     {

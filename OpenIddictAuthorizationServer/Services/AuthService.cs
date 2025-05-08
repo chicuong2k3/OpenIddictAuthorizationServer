@@ -3,14 +3,7 @@ using Microsoft.Extensions.Primitives;
 using OpenIddict.Abstractions;
 using static OpenIddict.Abstractions.OpenIddictConstants;
 using System.Security.Claims;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
-using Microsoft.AspNetCore;
-using System.Text.Json;
-using System.Web;
-using OpenIddictAuthorizationServer.Persistence;
 using System.Text;
 
 namespace OpenIddictAuthorizationServer.Services;
@@ -97,19 +90,4 @@ public class AuthService
         }
     }
 
-    public bool ValidatePkce(string? codeChallenge, string? codeVerifier)
-    {
-        if (string.IsNullOrEmpty(codeChallenge) || string.IsNullOrEmpty(codeVerifier))
-        {
-            return false;
-        }
-
-        using var sha256 = SHA256.Create();
-        var challengeBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(codeVerifier));
-        var computedChallenge = Convert.ToBase64String(challengeBytes)
-            .TrimEnd('=')
-            .Replace('+', '-')
-            .Replace('/', '_');
-        return computedChallenge == codeChallenge;
-    }
 }
