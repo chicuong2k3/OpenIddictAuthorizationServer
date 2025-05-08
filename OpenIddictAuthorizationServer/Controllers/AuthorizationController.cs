@@ -258,6 +258,19 @@ public class AuthorizationController : Controller
     [Authorize(AuthenticationSchemes = OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)]
     public async Task<IActionResult> GetUserInfo()
     {
+        // To align with the OpenID Connect specification
+        if (!User.HasScope(Scopes.OpenId))
+        {
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidScope,
+                    [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
+                        "The openid scope is required to access the userinfo endpoint."
+                }));
+        }
+
         var user = await _userManager.FindByIdAsync(User.GetClaim(Claims.Subject) ?? string.Empty);
         if (user == null)
         {
@@ -265,9 +278,9 @@ public class AuthorizationController : Controller
                 authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 properties: new AuthenticationProperties(new Dictionary<string, string?>
                 {
-                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.InvalidToken,
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = Errors.AccessDenied,
                     [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] =
-                        "The specified access token is bound to an account that no longer exists."
+                        "The account associated with the token no longer exists."
                 }));
 
         }
@@ -279,13 +292,17 @@ public class AuthorizationController : Controller
 
         if (User.HasScope(Scopes.Email))
         {
-            claims[Claims.Email] = user.Email!;
+            claims[Claims.Email] = user.Email ?? string.Empty;
             claims[Claims.EmailVerified] = user.EmailConfirmed;
         }
 
         if (User.HasScope(Scopes.Profile))
         {
-            claims[Claims.Name] = user.UserName!;
+            claims[Claims.Name] = user.UserName ?? string.Empty;
+            if (user.Picture != null)
+            {
+                claims[Claims.Picture] = user.Picture;
+            }
         }
 
         if (User.HasScope(Scopes.Roles))

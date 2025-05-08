@@ -88,7 +88,6 @@ builder.Services.AddOpenIddict()
 
 builder.Services.AddAuthentication(options =>
 {
-    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
     options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
     options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
 })
