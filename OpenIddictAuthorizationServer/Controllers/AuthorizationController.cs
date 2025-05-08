@@ -11,7 +11,6 @@ using System.Collections.Immutable;
 using OpenIddictAuthorizationServer.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using OpenIddictAuthorizationServer.Services;
-using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 
 namespace OpenIddictAuthorizationServer.Controllers;
@@ -142,7 +141,7 @@ public class AuthorizationController : Controller
 
         identity.SetClaim(Claims.Subject, userId)
                 .SetClaim(Claims.Email, user.Email)
-                .SetClaim(Claims.Name, result.Principal?.FindFirst(ClaimTypes.Name)?.Value ?? userId)
+                .SetClaim(Claims.Name, user.UserName ?? userId)
                 .SetClaims(Claims.Role, (await _userManager.GetRolesAsync(user)).ToImmutableArray())
                 .SetScopes(requestedScopes)
                 .SetResources(await _scopeManager.ListResourcesAsync(requestedScopes).ToListAsync());
@@ -233,7 +232,7 @@ public class AuthorizationController : Controller
 
         identity.SetClaim(Claims.Subject, userId)
             .SetClaim(Claims.Email, user.Email)
-            .SetClaim(Claims.Name, result.Principal?.FindFirst(ClaimTypes.Name)?.Value ?? userId)
+            .SetClaim(Claims.Name, user.UserName ?? userId)
             .SetClaims(Claims.Role, (await _userManager.GetRolesAsync(user)).ToImmutableArray())
             .SetScopes(request.GetScopes())
             .SetResources(await _scopeManager.ListResourcesAsync(request.GetScopes()).ToListAsync());
