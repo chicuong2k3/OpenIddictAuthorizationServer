@@ -16,12 +16,12 @@ public class UsersController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IEmailService _emailService;
-    private readonly ILogger<AccountController> _logger;
+    private readonly ILogger<UsersController> _logger;
 
     public UsersController(
         UserManager<ApplicationUser> userManager,
         IEmailService emailService,
-        ILogger<AccountController> logger)
+        ILogger<UsersController> logger)
     {
         _userManager = userManager;
         _emailService = emailService;
