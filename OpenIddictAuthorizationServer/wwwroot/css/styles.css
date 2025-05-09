@@ -1,39 +1,6 @@
 
 @import "tailwindcss";
 
-
-@theme {
-    /* light theme */
-    --color-surface: var(--color-white);
-    --color-surface-alt: var(--color-emerald-50);
-    --color-on-surface: var(--color-neutral-700);
-    --color-on-surface-strong: var(--color-emerald-800);
-    --color-primary: var(--color-red-600);
-    --color-on-primary: var(--color-white);
-    --color-secondary: var(--color-emerald-700);
-    --color-on-secondary: var(--color-white);
-    --color-outline: transparent;
-    --color-outline-strong: var(--color-neutral-800);
-    /* dark theme */
-    --color-surface-dark: var(--color-emerald-950);
-    --color-surface-dark-alt: var(--color-emerald-800);
-    --color-on-surface-dark: var(--color-neutral-200);
-    --color-on-surface-dark-strong: var(--color-amber-100);
-    --color-primary-dark: var(--color-red-600);
-    --color-on-primary-dark: var(--color-white);
-    --color-secondary-dark: var(--color-emerald-600);
-    --color-on-secondary-dark: var(--color-white);
-    --color-outline-dark: var(--color-emerald-900);
-    --color-outline-dark-strong: var(--color-white);
-    /* shared colors */
-    --color-info: var(--color-cyan-500);
-    --color-on-info: var(--color-black);
-    --color-success: var(--color-emerald-500);
-    --color-on-success: var(--color-black);
-    --color-warning: var(--color-amber-500);
-    --color-on-warning: var(--color-black);
-    --color-danger: var(--color-red-500);
-    --color-on-danger: var(--color-black);
-    /* border radius */
-    --radius-radius: var(--radius-md);
-}
+@import "flowbite/src/themes/default";
+@plugin "flowbite/plugin";
+@source "../../node_modules/flowbite";

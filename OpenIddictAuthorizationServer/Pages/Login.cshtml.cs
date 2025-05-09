@@ -36,13 +36,11 @@ public class LoginModel : PageModel
     [BindProperty(SupportsGet = true)]
     public string? ReturnUrl { get; set; }
 
-    [BindProperty(SupportsGet = true)]
-    public string? Error { get; set; }
+    [BindProperty]
+    public string? ErrorMessage { get; set; }
 
     [BindProperty]
     public InputModel Input { get; set; } = new();
-
-    public string? ErrorMessage { get; set; }
 
     public class InputModel
     {
@@ -59,11 +57,6 @@ public class LoginModel : PageModel
 
     public async Task OnGetAsync()
     {
-        if (!string.IsNullOrEmpty(Error))
-        {
-            ErrorMessage = HttpUtility.UrlDecode(Error);
-        }
-
         if (!string.IsNullOrEmpty(ReturnUrl))
         {
             var authorizationEndpointUri = _configuration["OpenIddictUris:AuthorizationEndpointUri"]
@@ -86,7 +79,7 @@ public class LoginModel : PageModel
         var user = await _userManager.FindByEmailAsync(Input.Email);
         if (user == null)
         {
-            ModelState.AddModelError(string.Empty, "Invalid email or password.");
+            ErrorMessage = "Invalid email or password.";
             return Page();
         }
 
