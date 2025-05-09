@@ -188,7 +188,7 @@
                     const email = document.getElementById('reset-email').value;
 
                     try {
-                        const response = await fetch('/api/account/request-reset-password', {
+                        const response = await fetch('/api/users/request-reset-password', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ email })

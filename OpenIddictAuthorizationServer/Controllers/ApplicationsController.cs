@@ -17,20 +17,20 @@ public class ApplicationsController : ControllerBase
         _applicationManager = applicationManager;
     }
 
-    [HttpGet]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetApplications()
-    {
-        var applications = await _applicationManager.ListAsync()
-            .Select(a => new
-            {
-                ClientId = a.Properties[OpenIddictConstants.Properties.ClientId],
-                DisplayName = a.Properties[OpenIddictConstants.Properties.DisplayName],
-                RedirectUri = a.Properties[OpenIddictConstants.Properties.RedirectUri]
-            })
-            .ToListAsync();
-        return Ok(applications);
-    }
+    //[HttpGet]
+    //[Authorize(Roles = "Admin")]
+    //public async Task<IActionResult> GetApplications()
+    //{
+    //    var applications = new List<OpenIddictApplicationDescriptor>();
+    //    await foreach (var application in _applicationManager.ListAsync())
+    //    {
+    //        applications.Add(new OpenIddictApplicationDescriptor
+    //        {
+    //            DisplayName = application.DisplayName,
+    //        });
+    //    }
+    //    return Ok(applications);
+    //}
 
     [HttpPost]
     [Authorize(Roles = "Admin")]
