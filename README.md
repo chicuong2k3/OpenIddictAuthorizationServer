@@ -73,11 +73,11 @@ This diagram illustrates the implementation of the Authorization Code Flow with 
 
 ## &#11088; Give a Star
 
-If you found this project helpful, please &#11088; star the repository on [GitHub](https://github.com/chicuong2k3/OpenIddictIdentityServer)!
-
+If you found this project helpful, please give this repository a &#11088;
 
 ## Resources
 
 - [OpenIddict Documentation](https://documentation.openiddict.com/)
 - [The OAuth 2.0 Authorization Framework](https://datatracker.ietf.org/doc/html/rfc6749)
 - [Proof Key for Code Exchange](https://datatracker.ietf.org/doc/html/rfc7636)
+- [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)
