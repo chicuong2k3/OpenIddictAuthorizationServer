@@ -124,7 +124,11 @@ public class UsersController : ControllerBase
 
         var token = await _userManager.GeneratePasswordResetTokenAsync(user);
         var encodedToken = HttpUtility.UrlEncode(token);
-        var resetLink = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/reset-password?email={HttpUtility.UrlEncode(request.Email)}&token={encodedToken}";
+        var resetLink = $"{HttpContext.Request.Scheme}://{HttpContext.Request.Host}/ResetPassword?email={HttpUtility.UrlEncode(request.Email)}&token={encodedToken}";
+        if (!string.IsNullOrEmpty(request.ReturnUrl))
+        {
+            resetLink += $"&returnUrl={HttpUtility.UrlEncode(request.ReturnUrl)}";
+        }
         var success = await _emailService.SendEmailAsync("abc@gmail.com", request.Email, "Reset Password", resetLink, null);
 
         if (!success)

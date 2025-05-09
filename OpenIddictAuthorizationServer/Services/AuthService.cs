@@ -5,7 +5,6 @@ using static OpenIddict.Abstractions.OpenIddictConstants;
 using System.Security.Claims;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Web;
-using Microsoft.Extensions.Logging;
 
 namespace OpenIddictAuthorizationServer.Services;
 

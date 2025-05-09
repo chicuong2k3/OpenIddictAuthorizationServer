@@ -130,6 +130,23 @@
 
 <partial name="_ForgotPasswordPartial" />
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div id="success-toast" class="fixed top-4 right-4 z-50 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md flex items-center max-w-md transition-all duration-300 transform translate-x-0 opacity-100" role="alert">
+        <svg class="flex-shrink-0 w-5 h-5 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <div class="ml-3 text-sm font-medium">
+            @TempData["SuccessMessage"]
+        </div>
+        <button type="button" class="ml-auto -mx-1.5 -my-1.5 text-green-500 hover:text-green-700 focus:outline-none p-1.5" data-dismiss-target="#success-toast" aria-label="Close">
+            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+        </button>
+    </div>
+}
+
 @section Scripts {
     <script>
         document.addEventListener('DOMContentLoaded', () => {
@@ -186,12 +203,12 @@
                     document.getElementById('email-error').textContent = '';
 
                     const email = document.getElementById('reset-email').value;
-
+                    const returnUrl = '@Uri.EscapeDataString(Model.ReturnUrl ?? "")';
                     try {
                         const response = await fetch('/api/users/request-reset-password', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ email })
+                            body: JSON.stringify({ email, returnUrl })
                         });
 
                         if (!response.ok) {
@@ -220,6 +237,30 @@
                 modal.querySelector('.relative').addEventListener('click', (e) => {
                     e.stopPropagation();
                 });
+            }
+
+            // Auto-hide toast
+            const successToast = document.getElementById('success-toast');
+            if (successToast) {
+                setTimeout(() => {
+                    successToast.classList.add('opacity-0');
+                    successToast.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        successToast.remove();
+                    }, 300);
+                }, 3000);
+
+                // Close toast when clicking the X button
+                const closeButton = successToast.querySelector('[data-dismiss-target="#success-toast"]');
+                if (closeButton) {
+                    closeButton.addEventListener('click', () => {
+                        successToast.classList.add('opacity-0');
+                        successToast.classList.add('translate-x-full');
+                        setTimeout(() => {
+                            successToast.remove();
+                        }, 300);
+                    });
+                }
             }
         });
 
