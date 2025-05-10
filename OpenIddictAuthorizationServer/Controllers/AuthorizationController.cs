@@ -12,6 +12,9 @@ using OpenIddictAuthorizationServer.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using OpenIddictAuthorizationServer.Services;
 using System.IdentityModel.Tokens.Jwt;
+using OpenIddict.EntityFrameworkCore.Models;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace OpenIddictAuthorizationServer.Controllers;
 
@@ -21,26 +24,36 @@ public class AuthorizationController : Controller
     private readonly IOpenIddictApplicationManager _applicationManager;
     private readonly IOpenIddictAuthorizationManager _authorizationManager;
     private readonly IOpenIddictScopeManager _scopeManager;
-    private readonly IOpenIddictTokenManager _tokenManager;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly AuthService _authService;
-
+    private readonly ApplicationDbContext _context;
     private const int MaxScopesAllowed = 50;
+
+    private static readonly Dictionary<string, Func<ApplicationUser, Task<object?>>> ClaimMappings = new()
+        {
+            { Claims.Subject, user => Task.FromResult<object?>(user.Id) },
+            { Claims.Email, user => Task.FromResult<object?>(user.Email) },
+            { Claims.EmailVerified, user => Task.FromResult<object?>(user.EmailConfirmed) },
+            { Claims.Name, user => Task.FromResult<object?>(user.UserName ?? user.Id) },
+            { Claims.Picture, user => Task.FromResult<object?>(user.Picture) },
+            { Claims.GivenName, user => Task.FromResult<object?>(user.FirstName) },
+            { Claims.FamilyName, user => Task.FromResult<object?>(user.LastName) }
+        };
 
     public AuthorizationController(
         IOpenIddictApplicationManager applicationManager,
         IOpenIddictAuthorizationManager authorizationManager,
         IOpenIddictScopeManager scopeManager,
-        IOpenIddictTokenManager tokenManager,
         UserManager<ApplicationUser> userManager,
-        AuthService authService)
+        AuthService authService,
+        ApplicationDbContext context)
     {
         _applicationManager = applicationManager;
         _authorizationManager = authorizationManager;
         _scopeManager = scopeManager;
-        _tokenManager = tokenManager;
         _userManager = userManager;
         _authService = authService;
+        _context = context;
     }
 
     [HttpGet("~/authorize")]
@@ -146,6 +159,24 @@ public class AuthorizationController : Controller
                 .SetScopes(requestedScopes)
                 .SetResources(await _scopeManager.ListResourcesAsync(requestedScopes).ToListAsync());
 
+        // Include scope-associated claims in the token
+        var scopeClaims = await GetScopeClaimsAsync(requestedScopes);
+        foreach (var claim in scopeClaims)
+        {
+            if (claim == Claims.Role)
+            {
+                identity.SetClaims(Claims.Role, (await _userManager.GetRolesAsync(user)).ToImmutableArray());
+            }
+            else
+            {
+                var claimValue = await GetClaimValueAsync(user, claim);
+                if (claimValue != null)
+                {
+                    identity.SetClaim(claim, claimValue.ToString());
+                }
+            }
+        }
+
         var authorization = await _authorizationManager.CreateAsync(
             identity: identity,
             subject: userId,
@@ -236,6 +267,24 @@ public class AuthorizationController : Controller
             .SetClaims(Claims.Role, (await _userManager.GetRolesAsync(user)).ToImmutableArray())
             .SetScopes(request.GetScopes())
             .SetResources(await _scopeManager.ListResourcesAsync(request.GetScopes()).ToListAsync());
+
+        // Include scope-associated claims in the token
+        var scopeClaims = await GetScopeClaimsAsync(request.GetScopes());
+        foreach (var claim in scopeClaims)
+        {
+            if (claim == Claims.Role)
+            {
+                identity.SetClaims(Claims.Role, (await _userManager.GetRolesAsync(user)).ToImmutableArray());
+            }
+            else
+            {
+                var claimValue = await GetClaimValueAsync(user, claim);
+                if (claimValue != null)
+                {
+                    identity.SetClaim(claim, claimValue.ToString());
+                }
+            }
+        }
 
         identity.SetDestinations(AuthService.GetDestinations);
         return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
@@ -347,27 +396,70 @@ public class AuthorizationController : Controller
             claims[Claims.ExpiresAt] = exp;
         }
 
-        if (User.HasScope(Scopes.Email))
+        var requestedScopes = User.GetScopes();
+        var scopeClaims = await GetScopeClaimsAsync(requestedScopes);
+        foreach (var claim in scopeClaims)
         {
-            claims[Claims.Email] = user.Email ?? string.Empty;
-            claims[Claims.EmailVerified] = user.EmailConfirmed;
-        }
-
-        if (User.HasScope(Scopes.Profile))
-        {
-            claims[Claims.Name] = user.UserName ?? string.Empty;
-            if (user.Picture != null)
+            if (claim == Claims.Role)
             {
-                claims[Claims.Picture] = user.Picture;
+                claims[Claims.Role] = await _userManager.GetRolesAsync(user);
             }
-        }
-
-        if (User.HasScope(Scopes.Roles))
-        {
-            claims[Claims.Role] = await _userManager.GetRolesAsync(user);
+            else
+            {
+                var claimValue = await GetClaimValueAsync(user, claim);
+                if (claimValue != null)
+                {
+                    claims[claim] = claimValue;
+                }
+            }
         }
 
         return Ok(claims);
     }
 
+    private async Task<List<string>> GetScopeClaimsAsync(IEnumerable<string> scopes)
+    {
+        var validClaims = await _context.ClaimTypes.Select(ct => ct.Name).ToListAsync();
+        var claims = new List<string>();
+        foreach (var scope in scopes)
+        {
+            var scopeObj = await _scopeManager.FindByNameAsync(scope);
+            if (scopeObj is OpenIddictEntityFrameworkCoreScope efScope && efScope.Properties != null)
+            {
+                var properties = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(efScope.Properties);
+                if (properties != null && properties.TryGetValue(Constants.ScopeClaimsKey, out var claimsElement))
+                {
+                    var scopeClaims = claimsElement.Deserialize<List<string>>();
+                    if (scopeClaims != null)
+                    {
+                        claims.AddRange(scopeClaims.Where(c => validClaims.Contains(c)));
+                    }
+                }
+            }
+        }
+        return claims.Distinct().ToList();
+    }
+
+    private async Task<object?> GetClaimValueAsync(ApplicationUser user, string claimType)
+    {
+        if (!await _context.ClaimTypes.AnyAsync(ct => ct.Name == claimType))
+        {
+            return null;
+        }
+
+        // Check reserved claim mappings
+        if (ClaimMappings.TryGetValue(claimType, out var mapping))
+        {
+            return await mapping(user);
+        }
+
+        var userClaims = await _userManager.GetClaimsAsync(user);
+        var claim = userClaims.FirstOrDefault(c => c.Type == claimType);
+        if (claim != null)
+        {
+            return claim.Value;
+        }
+
+        return null;
+    }
 }

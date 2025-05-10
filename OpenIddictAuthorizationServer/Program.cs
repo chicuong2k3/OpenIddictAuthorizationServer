@@ -137,8 +137,6 @@ builder.Services.ConfigureApplicationCookie(options =>
 });
 
 builder.Services.AddScoped<AuthService>();
-builder.Services.AddSingleton<ClientsSeeder>();
-
 builder.Services.AddScoped<IEmailService, MockEmailService>();
 
 builder.Services.AddRateLimiter(options =>
@@ -169,12 +167,12 @@ if (app.Environment.IsDevelopment())
 
 using (var scope = app.Services.CreateScope())
 {
-    var seeder = scope.ServiceProvider.GetRequiredService<ClientsSeeder>();
+    var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<DbInitializer>>();
     var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
     await dbContext.Database.EnsureDeletedAsync();
     await dbContext.Database.EnsureCreatedAsync();
-    await seeder.AddScopesAsync();
-    await seeder.AddClientsAsync();
+    await DbInitializer.InitializeAsync(dbContext, services, logger);
 }
 
 

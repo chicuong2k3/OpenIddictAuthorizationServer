@@ -1,4 +1,4 @@
-﻿namespace OpenIddictAuthorizationServer.Models;
+﻿namespace OpenIddictAuthorizationServer.Api.Requests;
 
 public class UpdateUserRequest
 {

@@ -3,12 +3,14 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using OpenIddictAuthorizationServer.Api.Dtos;
+using OpenIddictAuthorizationServer.Api.Requests;
 using OpenIddictAuthorizationServer.Models;
 using OpenIddictAuthorizationServer.Persistence;
 using OpenIddictAuthorizationServer.Services;
 using System.Web;
 
-namespace OpenIddictAuthorizationServer.Controllers;
+namespace OpenIddictAuthorizationServer.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
@@ -29,15 +31,25 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Admin")]
-    public async Task<IActionResult> GetUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    public async Task<IActionResult> GetUsers(
+        [FromQuery] string search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10)
     {
-        var users = await _userManager.Users
+        var users = _userManager.Users;
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            users = users.Where(u => (!string.IsNullOrEmpty(u.Email) && u.Email.ToLower().Contains(search.ToLower()))
+                || (!string.IsNullOrEmpty(u.UserName) && u.UserName.ToLower().Contains(search.ToLower())));
+        }
+
+        users = users.OrderBy(u => u.Email)
             .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+                    .Take(pageSize);
 
         var totalRecords = await _userManager.Users.CountAsync();
+        var userDtos = await Task.WhenAll(users.Select(u => u.MapToDtoAsync(_userManager)));
 
         return Ok(new PaginationResponse<UserDto>()
         {
@@ -45,7 +57,7 @@ public class UsersController : ControllerBase
             PageSize = pageSize,
             TotalRecords = totalRecords,
             TotalPages = (int)Math.Ceiling((double)totalRecords / pageSize),
-            Items = users.Select(MapToDto).ToList()
+            Items = userDtos.ToList()
         });
     }
 
@@ -55,23 +67,10 @@ public class UsersController : ControllerBase
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null)
         {
-            return NotFound();
+            return NotFound(new { errorMessage = $"User with email '{email}' not found." });
         }
 
-        return Ok(MapToDto(user));
-    }
-
-    private UserDto MapToDto(ApplicationUser user)
-    {
-        return new UserDto
-        {
-            Id = user.Id,
-            Email = user.Email,
-            UserName = user.UserName,
-            PhoneNumber = user.PhoneNumber,
-            Picture = user.Picture,
-            Roles = _userManager.GetRolesAsync(user).Result.ToList()
-        };
+        return Ok(await user.MapToDtoAsync(_userManager));
     }
 
     [HttpPut("{email}")]
@@ -80,7 +79,7 @@ public class UsersController : ControllerBase
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null)
         {
-            return NotFound();
+            return NotFound(new { errorMessage = $"User with email '{email}' not found." });
         }
 
         user.Picture = request.Picture;
@@ -90,7 +89,7 @@ public class UsersController : ControllerBase
             return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
         }
 
-        return Ok(MapToDto(user));
+        return Ok(await user.MapToDtoAsync(_userManager));
     }
 
     [HttpDelete("{email}")]
@@ -99,7 +98,7 @@ public class UsersController : ControllerBase
         var user = await _userManager.FindByEmailAsync(email);
         if (user == null)
         {
-            return NotFound();
+            return NotFound(new { errorMessage = $"User with email '{email}' not found." });
         }
 
         var result = await _userManager.DeleteAsync(user);
@@ -107,7 +106,7 @@ public class UsersController : ControllerBase
         {
             return BadRequest(new { Errors = result.Errors.Select(e => e.Description) });
         }
-        return Ok();
+        return NoContent();
     }
 
 

@@ -129,7 +129,7 @@ public class AuthService
             var client = await applicationManager.FindByClientIdAsync(clientId!);
             if (client == null)
             {
-                _logger.LogWarning("Client not found for client_id: {ClientId}", clientId);
+                _logger.LogWarning("Client not found for client_id: {ClientId}", clientId!);
                 return false;
             }
 
