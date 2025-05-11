@@ -108,17 +108,6 @@ public class AuthorizationController : Controller
                 }));
         }
 
-
-        // MFA check
-        if (await _userManager.GetTwoFactorEnabledAsync(user))
-        {
-            var parameters = _authService.ParseParameters(HttpContext);
-            parameters["email"] = user.Email;
-            var mfaUrl = $"/mfa{QueryString.Create(parameters)}";
-            return Redirect(mfaUrl);
-        }
-
-
         // get all requested scopes
         var requestedScopes = request.GetScopes();
         // Prevent DoS attacks

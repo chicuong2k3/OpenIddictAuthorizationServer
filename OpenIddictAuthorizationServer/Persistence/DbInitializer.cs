@@ -215,7 +215,8 @@ public class DbInitializer
             {
                 UserName = adminEmail,
                 Email = adminEmail,
-                EmailConfirmed = true
+                EmailConfirmed = true,
+                TwoFactorEnabled = true
             };
 
             if (await userManager.FindByEmailAsync(adminUser.Email) == null)
@@ -224,6 +225,19 @@ public class DbInitializer
                 if (result.Succeeded)
                 {
                     await userManager.AddToRoleAsync(adminUser, "admin");
+
+                    // Generate authenticator key
+                    var authenticatorKey = await userManager.GetAuthenticatorKeyAsync(adminUser);
+                    if (string.IsNullOrEmpty(authenticatorKey))
+                    {
+                        await userManager.ResetAuthenticatorKeyAsync(adminUser);
+                        authenticatorKey = await userManager.GetAuthenticatorKeyAsync(adminUser);
+                    }
+
+                    var issuer = Constants.Issuer;
+                    var qrCodeUri = $"otpauth://totp/{issuer}:{adminUser.Email}?secret={authenticatorKey}&issuer={issuer}";
+                    _logger?.LogInformation("Admin user MFA setup: QR Code URI = {QrCodeUri}", qrCodeUri);
+
                     var claims = new[]
                     {
                         new IdentityUserClaim<string>
@@ -255,7 +269,7 @@ public class DbInitializer
                     ClientId = "web_client",
                     ClientType = "web",
                     DisplayName = "Web Client",
-                    ClientSecret = "web_secret",
+                    ClientSecret = "web_client_secret",
                     RedirectUris = new[] { "https://localhost:9090/signin-oidc" },
                     PostLogoutRedirectUris = new[] { "https://localhost:9090/signout-callback-oidc" },
                     Permissions = new[]

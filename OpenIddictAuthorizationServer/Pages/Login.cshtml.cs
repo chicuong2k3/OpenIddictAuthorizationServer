@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.WebUtilities;
 using OpenIddict.Abstractions;
 using OpenIddictAuthorizationServer.Persistence;
 using OpenIddictAuthorizationServer.Services;
@@ -42,6 +41,8 @@ public class LoginModel : PageModel
     [BindProperty]
     public InputModel Input { get; set; } = new();
 
+    public bool ShowMfa { get; set; }
+
     public class InputModel
     {
         [Required]
@@ -53,6 +54,9 @@ public class LoginModel : PageModel
         public string Password { get; set; } = string.Empty;
 
         public bool RememberMe { get; set; }
+
+        [DataType(DataType.Text)]
+        public string? TotpCode { get; set; }
     }
 
     public async Task OnGetAsync()
@@ -77,17 +81,51 @@ public class LoginModel : PageModel
         }
 
         var user = await _userManager.FindByEmailAsync(Input.Email);
-        if (user == null)
+        if (user == null || !await _userManager.CheckPasswordAsync(user, Input.Password))
         {
             ErrorMessage = "Invalid email or password.";
             return Page();
         }
 
-        var loginSuccess = await _userManager.CheckPasswordAsync(user, Input.Password);
-
-        if (!loginSuccess)
+        if (await _userManager.GetTwoFactorEnabledAsync(user))
         {
-            ErrorMessage = "Invalid email or password.";
+            ShowMfa = true;
+            return Page();
+        }
+
+        await _signInManager.SignInAsync(user, new AuthenticationProperties
+        {
+            IsPersistent = Input.RememberMe,
+            RedirectUri = ReturnUrl
+        });
+
+        return Redirect(ReturnUrl ?? "/");
+    }
+
+    public async Task<IActionResult> OnPostMfaAsync()
+    {
+        if (!ModelState.IsValid || string.IsNullOrEmpty(Input.TotpCode))
+        {
+            ErrorMessage = "Please enter a valid OTP code.";
+            ShowMfa = true;
+            return Page();
+        }
+
+        var user = await _userManager.FindByEmailAsync(Input.Email);
+        if (user == null)
+        {
+            ErrorMessage = "Invalid email address.";
+            ShowMfa = true;
+            return Page();
+        }
+
+        var isValid = await _userManager.VerifyTwoFactorTokenAsync(
+            user, _userManager.Options.Tokens.AuthenticatorTokenProvider, Input.TotpCode);
+
+        if (!isValid)
+        {
+            ErrorMessage = "Invalid OTP code.";
+            ShowMfa = true;
             return Page();
         }
 

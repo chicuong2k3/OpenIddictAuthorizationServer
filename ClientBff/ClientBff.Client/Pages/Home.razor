@@ -13,6 +13,8 @@ Welcome to your new app.
 
 <AuthorizeView>
     <Authorized>
+        <button @onclick="Logout">Logout</button>
+
         @if (tokenResponse == null)
         {
             <p>Loading...</p>
@@ -34,7 +36,7 @@ Welcome to your new app.
         }
     </Authorized>
     <NotAuthorized>
-        <button @onclick="Login">Đăng nhập</button>
+        <button @onclick="Login">Login</button>
     </NotAuthorized>
 </AuthorizeView>
 
@@ -42,6 +44,11 @@ Welcome to your new app.
     private void Login()
     {
         NavigationManager.NavigateTo("/account/login", forceLoad: true);
+    }
+
+    private void Logout()
+    {
+        NavigationManager.NavigateTo("/account/logout", forceLoad: true);
     }
 
     private TokenResponse? tokenResponse;

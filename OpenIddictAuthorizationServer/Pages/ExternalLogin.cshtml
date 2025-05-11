@@ -1,5 +1,89 @@
 ﻿@page
-@using OpenIddictAuthorizationServer.Pages
-@model ExternalLoginModel
+@model OpenIddictAuthorizationServer.Pages.ExternalLoginModel
 @{
+}
+
+<div class="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center p-4">
+    <div class="container max-w-6xl mx-auto">
+        <div class="flex flex-col lg:flex-row bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden">
+            <div class="lg:w-1/2 relative hidden lg:block">
+                <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-800 opacity-90"></div>
+                <div class="absolute inset-0 flex items-center justify-center p-12">
+                    <div class="text-white text-center">
+                        <h1 class="text-4xl font-bold mb-4">Welcome Back</h1>
+                        <p class="text-lg opacity-90">Complete your login to access your secure dashboard.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="w-full lg:w-1/2 py-12 px-8 md:px-12">
+                <div class="max-w-md mx-auto">
+                    <h2 class="mb-8 flex justify-center text-3xl font-bold text-gray-900 dark:text-white">Two-Factor Authentication</h2>
+                    @if (Model.ShowMfa)
+                    {
+                        <form method="post" asp-page-handler="Mfa" class="space-y-4">
+                            <input type="hidden" asp-for="Email" />
+                            <input type="hidden" asp-for="ReturnUrl" />
+                            <div>
+                                <label asp-for="TotpCode" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Two-Factor Authentication Code</label>
+                                <div class="relative">
+                                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg class="h-5 w-5 text-gray-400 dark:text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0-1.1.9-2 2-2h1a2 2 0 012 2v1a2 2 0 01-2 2h-1a2 2 0 01-2-2v-1zm-4 0c0-1.1.9-2 2-2h1a2 2 0 012 2v1a2 2 0 01-2 2h-1a2 2 0 01-2-2v-1zm-4 0c0-1.1.9-2 2-2h1a2 2 0 012 2v1a2 2 0 01-2 2h-1a2 2 0 01-2-2v-1z" />
+                                        </svg>
+                                    </div>
+                                    <input asp-for="TotpCode"
+                                           class="pl-10 w-full bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                           placeholder="Enter 6-digit code" autocomplete="off" />
+                                </div>
+                                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                                {
+                                    <span class="text-red-500 dark:text-red-400 text-xs mt-1 block">
+                                        @Model.ErrorMessage
+                                    </span>
+                                }
+                            </div>
+                            <button type="submit"
+                                    class="w-full bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-300 text-white font-medium rounded-lg text-base px-5 py-3 text-center transition-all dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                                Verify Code
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <p class="text-center text-gray-600 dark:text-gray-400">Processing external login...</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Auto-hide toast (if added)
+            const successToast = document.getElementById('success-toast');
+            if (successToast) {
+                setTimeout(() => {
+                    successToast.classList.add('opacity-0');
+                    successToast.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        successToast.remove();
+                    }, 300);
+                }, 3000);
+
+                const closeButton = successToast.querySelector('[data-dismiss-target="#success-toast"]');
+                if (closeButton) {
+                    closeButton.addEventListener('click', () => {
+                        successToast.classList.add('opacity-0');
+                        successToast.classList.add('translate-x-full');
+                        setTimeout(() => {
+                            successToast.remove();
+                        }, 300);
+                    });
+                }
+            }
+        });
+    </script>
 }

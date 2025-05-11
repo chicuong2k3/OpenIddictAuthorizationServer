@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using OpenIddict.Abstractions;
 using OpenIddictAuthorizationServer.Persistence;
 using OpenIddictAuthorizationServer.Services;
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Web;
 
@@ -40,6 +41,17 @@ public class ExternalLoginModel : PageModel
 
     [BindProperty(SupportsGet = true)]
     public string? ReturnUrl { get; set; }
+
+    [BindProperty]
+    public string? Email { get; set; }
+
+    [BindProperty]
+    [DataType(DataType.Text)]
+    public string? TotpCode { get; set; }
+
+    public bool ShowMfa { get; set; }
+
+    public string? ErrorMessage { get; set; }
 
     private static readonly HashSet<string> SupportedProviders = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -137,6 +149,14 @@ public class ExternalLoginModel : PageModel
             _logger.LogInformation("Added external login for user: {Email}", email);
         }
 
+        if (await _userManager.GetTwoFactorEnabledAsync(user))
+        {
+            Email = user.Email;
+            ShowMfa = true;
+            ReturnUrl = returnUrl;
+            return Page();
+        }
+
         var signInResult = await _signInManager.ExternalLoginSignInAsync(
             info.LoginProvider,
             info.ProviderKey,
@@ -157,6 +177,42 @@ public class ExternalLoginModel : PageModel
             RedirectUri = returnUrl
         });
         return Redirect(returnUrl!);
+    }
+
+    public async Task<IActionResult> OnPostMfaAsync()
+    {
+        if (string.IsNullOrEmpty(TotpCode))
+        {
+            ErrorMessage = "Please enter a valid OTP code.";
+            ShowMfa = true;
+            return Page();
+        }
+
+        var user = await _userManager.FindByEmailAsync(Email ?? string.Empty);
+        if (user == null)
+        {
+            ErrorMessage = "User not found.";
+            ShowMfa = true;
+            return Page();
+        }
+
+        var isValid = await _userManager.VerifyTwoFactorTokenAsync(
+            user, _userManager.Options.Tokens.AuthenticatorTokenProvider, TotpCode);
+
+        if (!isValid)
+        {
+            ErrorMessage = "Invalid OTP code.";
+            ShowMfa = true;
+            return Page();
+        }
+
+        await _signInManager.SignInAsync(user, new AuthenticationProperties
+        {
+            IsPersistent = true,
+            RedirectUri = ReturnUrl
+        });
+
+        return Redirect(ReturnUrl ?? "/");
     }
 
     private bool IsValidProvider(string? provider)

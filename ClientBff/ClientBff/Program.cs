@@ -32,7 +32,7 @@ builder.Services.AddAuthentication(options =>
     options.Scope.Add("profile");
     options.Scope.Add("email");
     options.Scope.Add("roles");
-    options.Scope.Add("api");
+    ///options.Scope.Add("api");
 
     // the paths where the OpenIddict server will redirect the user after authentication
     // defaults to /signin-oidc
