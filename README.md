@@ -64,13 +64,6 @@ The server generates a unique token for each session and includes it in the logi
 When the user submits the form, the server verifies the token before processing the request.
 - While CSRF attacks can be mitigated in SPAs using those above techniques, they are more complex and error-prone compared to server-rendered login pages.
 
-
-## Implementation with OpenIddict
-
-This diagram illustrates the implementation of the Authorization Code Flow with PKCE using OpenIddict:
-![OpenIddict Implementation](./images/openiddict.jpeg)
-
-
 ## &#11088; Give a Star
 
 If you found this project helpful, please give this repository a &#11088;
