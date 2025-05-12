@@ -287,6 +287,30 @@ public class DbInitializer
                         Permissions.Scopes.Roles
                     },
                     Requirements = new string[] { }
+                },
+                new
+                {
+                    ClientId = "swagger",
+                    ClientType = "web",
+                    DisplayName = "Swagger UI",
+                    ClientSecret = "swagger_secret",
+                    RedirectUris = new[] { "https://localhost:7070/swagger/oauth2-redirect.html" },
+                    PostLogoutRedirectUris = new[] { "https://localhost:7070" },
+                    Permissions = new[]
+                    {
+                        Permissions.Endpoints.Authorization,
+                        Permissions.Endpoints.Token,
+                        Permissions.Endpoints.EndSession,
+                        Permissions.GrantTypes.AuthorizationCode,
+                        Permissions.GrantTypes.RefreshToken,
+                        Permissions.ResponseTypes.Code,
+                        $"{Permissions.Prefixes.Scope}openid",
+                        $"{Permissions.Prefixes.Scope}offline_access",
+                        Permissions.Scopes.Email,
+                        Permissions.Scopes.Profile,
+                        Permissions.Scopes.Roles
+                    },
+                    Requirements = new string[] { }
                 }
             };
 

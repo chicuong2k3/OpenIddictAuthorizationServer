@@ -3,13 +3,16 @@ using AspNetCoreHero.ToastNotification.Extensions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Facebook;
 using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OpenIddictAuthorizationServer.Persistence;
 using OpenIddictAuthorizationServer.Services;
+using static OpenIddict.Abstractions.OpenIddictConstants;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -105,7 +108,7 @@ builder.Services.AddAuthentication(options =>
 {
     options.DefaultSignInScheme = IdentityConstants.ApplicationScheme;
     options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
-    options.DefaultChallengeScheme = IdentityConstants.ExternalScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
     .AddGoogle(GoogleDefaults.AuthenticationScheme, options =>
     {
@@ -128,6 +131,20 @@ builder.Services.AddAuthentication(options =>
         options.Scope.Add("email");
         options.Scope.Add("public_profile");
         options.ClaimActions.MapJsonKey("picture", "picture");
+    })
+    .AddJwtBearer(options =>
+    {
+        var issuer = builder.Configuration["Authentication:JwtBearer:Issuer"]
+            ?? throw new InvalidOperationException("JwtBearer Authority is not configured.");
+        options.Authority = issuer;
+        options.RequireHttpsMetadata = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = issuer,
+            NameClaimType = Claims.Name,
+            RoleClaimType = Claims.Role
+        };
     });
 
 builder.Services.ConfigureApplicationCookie(options =>
@@ -141,6 +158,8 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.MaxAge = TimeSpan.FromDays(1);
     options.SlidingExpiration = true;
 });
+
+builder.Services.AddAuthorization();
 
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<IEmailService, MockEmailService>();
@@ -172,6 +191,11 @@ builder.Services.AddSwaggerGen(c =>
                 TokenUrl = new Uri("/token", UriKind.Relative),
                 Scopes = new Dictionary<string, string>
                 {
+                    { Scopes.OfflineAccess, "Offline access" },
+                    { Scopes.OpenId, "Open ID" },
+                    { Scopes.Email, "Email address" },
+                    { Scopes.Profile, "User profile" },
+                    { Scopes.Roles, "User roles" }
                 }
             }
         }
@@ -188,7 +212,13 @@ builder.Services.AddSwaggerGen(c =>
                     Id = "oauth2"
                 }
             },
-            []
+            [
+                Scopes.OfflineAccess,
+                Scopes.OpenId,
+                Scopes.Email,
+                Scopes.Profile,
+                Scopes.Roles
+            ]
         }
     });
 });
@@ -211,7 +241,9 @@ if (app.Environment.IsDevelopment())
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "OpenIddict Authorization Server API V1");
         c.OAuthClientId("swagger");
+        c.OAuthClientSecret("swagger_secret");
         c.OAuthUsePkce();
+        c.OAuthScopeSeparator(" ");
     });
 }
 

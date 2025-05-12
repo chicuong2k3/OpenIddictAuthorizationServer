@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
 using OpenIddict.EntityFrameworkCore.Models;
@@ -11,6 +12,7 @@ namespace OpenIddictAuthorizationServer.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "admin")]
 public class ScopesController : ControllerBase
 {
     private readonly IOpenIddictScopeManager _scopeManager;

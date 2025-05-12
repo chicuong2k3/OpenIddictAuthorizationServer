@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -17,12 +18,12 @@ public class AccountController : ControllerBase
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IEmailService _emailService;
-    private readonly ILogger<UsersController> _logger;
+    private readonly ILogger<AccountController> _logger;
 
     public AccountController(
         UserManager<ApplicationUser> userManager,
         IEmailService emailService,
-        ILogger<UsersController> logger)
+        ILogger<AccountController> logger)
     {
         _userManager = userManager;
         _emailService = emailService;
@@ -30,7 +31,6 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("request-reset-password")]
-    [AllowAnonymous]
     public async Task<IActionResult> RequestPasswordReset([FromBody] PasswordResetRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
@@ -56,7 +56,6 @@ public class AccountController : ControllerBase
     }
 
     [HttpPost("reset-password")]
-    [AllowAnonymous]
     [EnableRateLimiting("ResetPassword")]
     public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordConfirmRequest request)
     {

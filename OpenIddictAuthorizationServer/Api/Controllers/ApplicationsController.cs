@@ -11,6 +11,7 @@ namespace OpenIddictAuthorizationServer.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "admin")]
 public class ApplicationsController : ControllerBase
 {
     private readonly IOpenIddictApplicationManager _applicationManager;
