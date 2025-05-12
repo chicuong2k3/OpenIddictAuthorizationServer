@@ -1,3 +1,4 @@
+using AspNetCoreHero.ToastNotification.Abstractions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -13,11 +14,16 @@ public class RegisterModel : PageModel
 {
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IEmailService _emailService;
+    private readonly INotyfService _notifyService;
 
-    public RegisterModel(UserManager<ApplicationUser> userManager, IEmailService emailService)
+    public RegisterModel(
+        UserManager<ApplicationUser> userManager,
+        IEmailService emailService,
+        INotyfService notifyService)
     {
         _userManager = userManager;
         _emailService = emailService;
+        _notifyService = notifyService;
     }
 
     [BindProperty]
@@ -25,8 +31,6 @@ public class RegisterModel : PageModel
 
     [TempData]
     public string ErrorMessage { get; set; } = string.Empty;
-    [TempData]
-    public string SuccessMessage { get; set; } = string.Empty;
 
     [BindProperty(SupportsGet = true)]
     public string? ReturnUrl { get; set; }
@@ -68,12 +72,12 @@ public class RegisterModel : PageModel
 
         if (!emailSent)
         {
-            ErrorMessage = "Failed to send confirmation email.";
+            _notifyService.Error("Error sending email. Please try again later.");
             await _userManager.DeleteAsync(user);
             return Page();
         }
 
-        SuccessMessage = "Sign up successful!";
+        _notifyService.Success("Registration successful. Please check your email to confirm your account.");
 
         return RedirectToPage("/Login", new { ReturnUrl });
     }

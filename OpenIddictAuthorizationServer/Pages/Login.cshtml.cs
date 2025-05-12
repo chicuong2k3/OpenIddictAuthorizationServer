@@ -6,7 +6,6 @@ using OpenIddict.Abstractions;
 using OpenIddictAuthorizationServer.Persistence;
 using OpenIddictAuthorizationServer.Services;
 using System.ComponentModel.DataAnnotations;
-using System.Web;
 
 namespace OpenIddictAuthorizationServer.Pages;
 

@@ -1,3 +1,4 @@
+using AspNetCoreHero.ToastNotification.Abstractions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -5,7 +6,6 @@ using OpenIddict.Abstractions;
 using OpenIddictAuthorizationServer.Persistence;
 using OpenIddictAuthorizationServer.Services;
 using System.ComponentModel.DataAnnotations;
-using System.Web;
 
 namespace OpenIddictAuthorizationServer.Pages;
 
@@ -16,19 +16,22 @@ public class ResetPasswordModel : PageModel
     private readonly IConfiguration _configuration;
     private readonly IOpenIddictApplicationManager _applicationManager;
     private readonly ILogger<ResetPasswordModel> _logger;
+    private readonly INotyfService _notifyService;
 
     public ResetPasswordModel(
         UserManager<ApplicationUser> userManager,
         AuthService authService,
         IConfiguration configuration,
         IOpenIddictApplicationManager applicationManager,
-        ILogger<ResetPasswordModel> logger)
+        ILogger<ResetPasswordModel> logger,
+        INotyfService notifyService)
     {
         _userManager = userManager;
         _authService = authService;
         _configuration = configuration;
         _applicationManager = applicationManager;
         _logger = logger;
+        _notifyService = notifyService;
     }
 
     [BindProperty]
@@ -104,7 +107,8 @@ public class ResetPasswordModel : PageModel
                 return Redirect("/login");
             }
 
-            TempData["SuccessMessage"] = "Password reset successfully! You can now login with your new password.";
+            _notifyService.Success("Password reset successfully! You can now login with your new password.");
+
             return Redirect($"/login?ReturnUrl={Input.ReturnUrl}");
         }
 
@@ -116,7 +120,7 @@ public class ResetPasswordModel : PageModel
         _logger.LogWarning("Password reset failed for {Email}: {Errors}", Input.Email,
             string.Join(", ", result.Errors.Select(e => e.Description)));
 
-        ErrorMessage = "Error: Failed to reset your password. Please verify your information and try again.";
+        ErrorMessage = "Failed to reset your password. Please verify your information and try again.";
         return Page();
     }
 }

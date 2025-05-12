@@ -8,6 +8,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="AspNetCoreHero.ToastNotification" Version="1.1.0" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.Facebook" Version="9.0.4" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="9.0.4" />
 		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.3" />

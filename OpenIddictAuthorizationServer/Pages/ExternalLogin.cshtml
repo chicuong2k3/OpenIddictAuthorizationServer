@@ -49,41 +49,8 @@
                             </button>
                         </form>
                     }
-                    else
-                    {
-                        <p class="text-center text-gray-600 dark:text-gray-400">Processing external login...</p>
-                    }
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Auto-hide toast (if added)
-            const successToast = document.getElementById('success-toast');
-            if (successToast) {
-                setTimeout(() => {
-                    successToast.classList.add('opacity-0');
-                    successToast.classList.add('translate-x-full');
-                    setTimeout(() => {
-                        successToast.remove();
-                    }, 300);
-                }, 3000);
-
-                const closeButton = successToast.querySelector('[data-dismiss-target="#success-toast"]');
-                if (closeButton) {
-                    closeButton.addEventListener('click', () => {
-                        successToast.classList.add('opacity-0');
-                        successToast.classList.add('translate-x-full');
-                        setTimeout(() => {
-                            successToast.remove();
-                        }, 300);
-                    });
-                }
-            }
-        });
-    </script>
-}
